@@ -4,6 +4,8 @@ import csv
 from datetime import datetime
 from collections import defaultdict
 import pytz
+from pathlib import Path
+import argparse
 
 
 LOCAL_TIMEZONE = 'America/Los_Angeles'
@@ -12,6 +14,8 @@ MAX_READING_TIME_DIFF = 60 * 10  # 10 minutes
 FIELDNAMES = ['type', 'value', 'unit', 'date', 'time']
 VALUE_TYPES = ['Glucose', 'Ketone', 'Hematocrit', 'Hemoglobin', 'Create Date', 'Update Date']
 
+INPUT_FILEPATH = './KetoMojo.csv'
+OUTPUT_FILEPATH = './keto_mojo_readings.csv'
 
 def reading_dict_to_date(reading):
     naive_datetime = datetime.strptime(
@@ -31,7 +35,7 @@ def gather_input(input_file_path):
     readings = []
     last_reading_date = None
     with open(input_file_path) as infile:
-        infile.next()
+        next(infile)
         data = csv.DictReader(infile, fieldnames=FIELDNAMES)
         reading_data = defaultdict(list)
         reading_update_date = None
@@ -76,9 +80,19 @@ def calculate_reading(data_type_to_values, create_date, update_date):
     return data
 
 
-if __name__ == '__main__':
-    input_file = 'KetoMojo.csv'
-    output_file = 'keto_mojo_readings.csv'
-    readings = gather_input(input_file)
+def main(input_filepath, output_filepath):
+    readings = gather_input(input_filepath)
     write_output(output_file, readings)
 
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-o', '--output-file', 
+        help="The file to write results to ",
+        default=OUTPUT_FILEPATH)
+    args = parser.parse_args()
+
+    input_file = Path(INPUT_FILEPATH).absolute()
+    output_file = Path(args.output_file).absolute()
+    main(input_file, output_file)
