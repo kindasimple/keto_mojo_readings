@@ -3,11 +3,11 @@ ACTIVATE = source venv/bin/activate &&
 
 all: start
 
-venv:
-	virtualenv venv
+venv: requirements.txt
+	python3 -m venv venv
 	$(ACTIVATE) pip3 install -r requirements.txt
 
 start: venv
-	$(ACTIVATE) python3 ./process_ketomojo.py -o keto_mojo_readings.csv
+	$(ACTIVATE) python3 ./ketomojo/process_ketomojo.py -o files/keto_mojo_readings.csv
 
 .PHONY: start all

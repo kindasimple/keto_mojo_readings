@@ -1,5 +1,4 @@
-#!/usr/bin
-
+#!/usr/bin/env python
 import csv
 from datetime import datetime
 from collections import defaultdict
@@ -7,6 +6,7 @@ import pytz
 from pathlib import Path
 import argparse
 
+import gdrive as gdrive
 
 LOCAL_TIMEZONE = 'America/Los_Angeles'
 MAX_READING_TIME_DIFF = 60 * 10  # 10 minutes
@@ -14,8 +14,8 @@ MAX_READING_TIME_DIFF = 60 * 10  # 10 minutes
 FIELDNAMES = ['type', 'value', 'unit', 'date', 'time']
 VALUE_TYPES = ['Glucose', 'Ketone', 'Hematocrit', 'Hemoglobin', 'Create Date', 'Update Date']
 
-INPUT_FILEPATH = './KetoMojo.csv'
-OUTPUT_FILEPATH = './keto_mojo_readings.csv'
+INPUT_FILEPATH = './files/KetoMojo.csv'
+OUTPUT_FILEPATH = './files/keto_mojo_readings.csv'
 
 def reading_dict_to_date(reading):
     naive_datetime = datetime.strptime(
@@ -24,12 +24,12 @@ def reading_dict_to_date(reading):
     )
     pst = pytz.timezone(LOCAL_TIMEZONE)
     return pst.localize(naive_datetime)
- 
+
 
 def gather_input(input_file_path):
     """
     iterate over readings in the input file and aggregate data points
-    captured within a 15 minute window, averaging readings of the same 
+    captured within a 15 minute window, averaging readings of the same
     type.
     """
     readings = []
@@ -79,20 +79,32 @@ def calculate_reading(data_type_to_values, create_date, update_date):
     data['Update Date'] = update_date.strftime('%m-%d-%Y %H:%m')
     return data
 
+def gdrive_readings():
+    """https://developers.google.com/drive/api/v3/quickstart/python"""
+    service = gdrive.connect()
+    input_filepath = Path(INPUT_FILEPATH)
+    gdrive.get(service, input_filepath.name, input_filepath.absolute())
+    return service, input_filepath.absolute()
 
-def main(input_filepath, output_filepath):
+def gdrive_results(service, output_filepath):
+    output_filepath = Path(output_filepath)
+    gdrive.store(service, output_filepath.name, output_filepath.absolute())
+
+
+def main(output_filepath):
+    service, input_filepath = gdrive_readings()
     readings = gather_input(input_filepath)
     write_output(output_file, readings)
+    gdrive_results(service, output_file)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-o', '--output-file', 
+        '-o', '--output-file',
         help="The file to write results to ",
         default=OUTPUT_FILEPATH)
     args = parser.parse_args()
 
-    input_file = Path(INPUT_FILEPATH).absolute()
     output_file = Path(args.output_file).absolute()
-    main(input_file, output_file)
+    main(output_file)
